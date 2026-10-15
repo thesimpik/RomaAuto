@@ -90,6 +90,21 @@ h3 { font-size:20px; line-height:1.25; margin-bottom:10px; }
 .car-placeholder:before { content:""; position:absolute; width:210px; height:210px; border:1px solid rgba(255,255,255,.06); border-radius:50%; box-shadow:0 0 0 30px rgba(255,255,255,.018); }
 .car-placeholder svg { width:88%; position:relative; z-index:1; }
 .demo-tag { position:absolute; z-index:2; top:12px; left:12px; background:#5b252b; color:#ffdfe1; border:1px solid #8d343d; border-radius:5px; font-size:10px; font-weight:900; padding:5px 8px; letter-spacing:.06em; }
+.car-photo { display:block; aspect-ratio:16/10; min-height:0; padding:0; }
+.car-photo:before { display:none; }
+.car-photo img { width:100%; height:100%; object-fit:cover; transition:transform .3s; }
+.car-card:hover .car-photo img { transform:scale(1.03); }
+.credit-badge { display:flex; align-items:center; gap:8px; background:rgba(227,52,63,.12); border:1px solid rgba(227,52,63,.45); color:#ffd9dc; border-radius:9px; padding:8px 11px; font-size:13px; font-weight:700; line-height:1.3; margin:2px 0 6px; }
+.credit-badge svg { width:16px; height:16px; flex-shrink:0; color:#ff626c; }
+.gallery { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.gallery-main { display:block; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#111318; aspect-ratio:16/10; }
+.gallery-main img { width:100%; height:100%; object-fit:cover; }
+.gallery-thumbs { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.gallery-thumb { padding:0; border:2px solid transparent; border-radius:9px; overflow:hidden; cursor:pointer; background:none; aspect-ratio:16/10; opacity:.7; }
+.gallery-thumb.active, .gallery-thumb:hover { border-color:var(--red); opacity:1; }
+.gallery-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.promo-banner { display:block; background:#0c0d10; border-bottom:1px solid var(--line); }
+.promo-banner img { display:block; width:100%; max-width:1600px; height:auto; margin:0 auto; }
 .car-card h3 { margin-bottom:8px; }
 .car-price { color:#ff626c; font-size:21px; font-weight:900; margin:5px 0 10px; }
 .car-meta { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 18px; }
