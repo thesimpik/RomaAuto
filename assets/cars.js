@@ -40,7 +40,7 @@ window.ROMANAVTO_CARS = [
     title: "Suzuki Kizashi",
     price: 900000,
     year: 2010,
-    mileage: 189000,
+    mileage: "Рома скажи пробег",
     engine: "2,4 л, 178 л.с.",
     transmission: "Автомат",
     drive: "Полный",
