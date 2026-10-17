@@ -114,7 +114,7 @@
       const photos = car.photos || [];
       const gallery = photos.length
         ? `<div class="gallery">
-            <a class="gallery-main" href="${photos[0]}.jpg" target="_blank" rel="noopener" data-gallery-main><img src="${photos[0]}.jpg" alt="${escapeHtml(car.title)} — фото 1" width="1600" height="900"></a>
+            <a class="gallery-main" href="${photos[0]}.jpg" target="_blank" rel="noopener" data-gallery-main><picture><source srcset="${photos[0]}.webp" type="image/webp" data-gallery-webp><img src="${photos[0]}.jpg" alt="${escapeHtml(car.title)} — фото 1" width="1600" height="900"></picture></a>
             <div class="gallery-thumbs">${photos.map((src, i) => `<button type="button" class="gallery-thumb${i === 0 ? " active" : ""}" data-src="${src}.jpg" data-webp="${src}.webp" aria-label="Фото ${i + 1}"><picture><source srcset="${src}-sm.webp" type="image/webp"><img src="${src}-sm.jpg" alt="" loading="lazy" decoding="async" width="720" height="420"></picture></button>`).join("")}</div>
           </div>`
         : `<div class="car-placeholder" style="border:1px solid var(--line);border-radius:16px;min-height:300px">${carArt()}</div>`;
@@ -146,7 +146,7 @@
       const showPhoto = i => {
         if (!thumbs.length) return;
         currentPhoto = (i + thumbs.length) % thumbs.length;
-        const thumb = thumbs[currentPhoto], img = main.querySelector("img"), source = main.querySelector("source");
+        const thumb = thumbs[currentPhoto], img = main.querySelector("img"), source = main.querySelector("[data-gallery-webp]");
         main.href = thumb.dataset.src; img.src = thumb.dataset.src; img.alt = `${car.title} — фото ${currentPhoto + 1}`;
         if (source) source.srcset = thumb.dataset.webp;
         thumbs.forEach((t, n) => t.classList.toggle("active", n === currentPhoto));
@@ -158,7 +158,7 @@
       let touchStartX = null;
       main.addEventListener("touchstart", e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
       main.addEventListener("touchend", e => { if (touchStartX === null) return; const dx=e.changedTouches[0].clientX-touchStartX; if(Math.abs(dx)>45) showPhoto(currentPhoto+(dx<0?1:-1)); touchStartX=null; }, {passive:true});
-      main.addEventListener("click", e => { e.preventDefault(); openLightbox(thumbs.map(t=>t.dataset.src), currentPhoto); });
+      main.addEventListener("click", e => { e.preventDefault(); openLightbox(thumbs.map(t=>({jpg:t.dataset.src,webp:t.dataset.webp})), currentPhoto); });
       const detailPanel = detail.querySelector(".detail-panel");
       const callButton = detailPanel.querySelector('a[href^="tel:"]');
       if (callButton) {
@@ -183,9 +183,9 @@
   function ensureLightbox() {
     if (lightbox) return lightbox;
     lightbox = document.createElement("div"); lightbox.className = "photo-lightbox"; lightbox.setAttribute("role","dialog"); lightbox.setAttribute("aria-modal","true"); lightbox.setAttribute("aria-label","Просмотр фотографий");
-    lightbox.innerHTML = '<button class="lightbox-close" aria-label="Закрыть">×</button><button class="lightbox-prev" aria-label="Предыдущее фото">‹</button><img alt="Фотография автомобиля"><button class="lightbox-next" aria-label="Следующее фото">›</button><span class="lightbox-count"></span>';
+    lightbox.innerHTML = '<button class="lightbox-close" aria-label="Закрыть">×</button><button class="lightbox-prev" aria-label="Предыдущее фото">‹</button><picture><source type="image/webp"><img alt="Фотография автомобиля"></picture><button class="lightbox-next" aria-label="Следующее фото">›</button><span class="lightbox-count"></span>';
     document.body.appendChild(lightbox);
-    const render = () => { lightbox.querySelector("img").src=lightboxPhotos[lightboxIndex]; lightbox.querySelector(".lightbox-count").textContent=`${lightboxIndex+1} / ${lightboxPhotos.length}`; };
+    const render = () => { const photo=lightboxPhotos[lightboxIndex]; lightbox.querySelector("source").srcset=photo.webp; lightbox.querySelector("img").src=photo.jpg; lightbox.querySelector(".lightbox-count").textContent=`${lightboxIndex+1} / ${lightboxPhotos.length}`; };
     lightbox.querySelector(".lightbox-close").onclick=()=>lightbox.classList.remove("open");
     lightbox.querySelector(".lightbox-prev").onclick=()=>{lightboxIndex=(lightboxIndex+lightboxPhotos.length-1)%lightboxPhotos.length;render();};
     lightbox.querySelector(".lightbox-next").onclick=()=>{lightboxIndex=(lightboxIndex+1)%lightboxPhotos.length;render();};
@@ -195,7 +195,7 @@
   }
   function openLightbox(photos, index=0) {
     if (!photos.length) return;
-    const box=ensureLightbox(); lightboxPhotos=photos; lightboxIndex=index; box.querySelector("img").src=photos[index]; box.querySelector(".lightbox-count").textContent=`${index+1} / ${photos.length}`; box.classList.add("open");
+    const box=ensureLightbox(); lightboxPhotos=photos; lightboxIndex=index; const photo=photos[index]; box.querySelector("source").srcset=photo.webp; box.querySelector("img").src=photo.jpg; box.querySelector(".lightbox-count").textContent=`${index+1} / ${photos.length}`; box.classList.add("open");
   }
 
   // Фотоальбом покупателей: отображаем только реальные фотографии, без текстовых карточек.
@@ -203,8 +203,9 @@
   function reviewCard(review) {
     if (!review.photo) return "";
     const alt = `Фото покупателя ${review.customer || ""}`.trim();
-    return `<a class="album-photo" href="${escapeHtml(review.photo)}" data-review-photo="${escapeHtml(review.photo)}" aria-label="Открыть фотографию в полном размере">
-      <img src="${escapeHtml(review.photo)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async">
+    const webp = review.photo.replace(/\.jpe?g$/i, ".webp");
+    return `<a class="album-photo" href="${escapeHtml(review.photo)}" data-review-photo="${escapeHtml(review.photo)}" data-review-webp="${escapeHtml(webp)}" aria-label="Открыть фотографию в полном размере">
+      <picture><source srcset="${escapeHtml(webp)}" type="image/webp"><img src="${escapeHtml(review.photo)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async"></picture>
     </a>`;
   }
   document.querySelectorAll("[data-reviews-preview], [data-reviews-all]").forEach(container => {
@@ -220,7 +221,7 @@
 
   document.addEventListener("click", event => {
     const photoLink = event.target.closest("[data-review-photo]");
-    if (photoLink) { event.preventDefault(); const all=[...document.querySelectorAll("[data-review-photo]")].map(a=>a.dataset.reviewPhoto); openLightbox(all, all.indexOf(photoLink.dataset.reviewPhoto)); }
+    if (photoLink) { event.preventDefault(); const all=[...document.querySelectorAll("[data-review-photo]")].map(a=>({jpg:a.dataset.reviewPhoto,webp:a.dataset.reviewWebp})); openLightbox(all, all.findIndex(photo=>photo.jpg===photoLink.dataset.reviewPhoto)); }
   });
 
   const forms = document.querySelectorAll("[data-demo-form]");
