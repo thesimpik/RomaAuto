@@ -36,15 +36,27 @@
   }
 
   const CREDIT_NOTE = "Можно купить в кредит без первоначального взноса";
-  const formatNumber = value => new Intl.NumberFormat("ru-RU").format(value);
+  const formatNumber = value => {
+    const numeric = Number(value);
+    return value !== "" && value != null && Number.isFinite(numeric)
+      ? new Intl.NumberFormat("ru-RU").format(numeric)
+      : String(value ?? "");
+  };
+  const formatMileage = value => {
+    if (value == null || value === "") return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && String(value).trim() !== ""
+      ? `${formatNumber(numeric)} км`
+      : String(value);
+  };
   const creditBadge = () => `<div class="credit-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>${CREDIT_NOTE}</div>`;
   const ownersLabel = n => n === 1 ? "1 собственник" : n + (n < 5 ? " собственника" : " собственников");
 
   function carCard(car) {
-    const attrs = [car.year ? car.year + " г.в." : null, car.mileage != null ? formatNumber(car.mileage) + " км" : null, car.engine, car.transmission, car.drive].filter(Boolean);
+    const attrs = [car.year ? car.year + " г.в." : null, formatMileage(car.mileage), car.engine, car.transmission, car.drive].filter(Boolean);
     const photo = car.photos && car.photos[0];
     const media = photo
-      ? `<img src="${photo}-sm.jpg" alt="${escapeHtml(car.title)}, ${escapeHtml(String(car.year || ""))}" loading="lazy" width="720" height="420">`
+      ? `<picture><source srcset="${photo}-sm.webp" type="image/webp"><img src="${photo}-sm.jpg" alt="${escapeHtml(car.title)}, ${escapeHtml(String(car.year || ""))}" loading="lazy" decoding="async" width="720" height="420"></picture>`
       : carArt();
     return `<article class="car-card" data-car-title="${escapeHtml(car.title.toLowerCase())}" data-car-price="${car.price ?? ""}" data-car-year="${car.year ?? ""}">
       <a class="car-placeholder${photo ? " car-photo" : ""}" href="car.html?id=${encodeURIComponent(car.id)}" tabindex="-1" aria-hidden="true">${media}</a>
@@ -59,7 +71,11 @@
   }
 
   const featured = document.querySelector("[data-car-featured]");
-  if (featured) featured.innerHTML = cars.map(carCard).join("");
+  if (featured) {
+    featured.innerHTML = cars.map(carCard).join("");
+    featured.setAttribute("tabindex", "0");
+    featured.setAttribute("aria-label", "Автомобили в наличии — прокручивайте по горизонтали");
+  }
 
   const catalog = document.querySelector("[data-car-grid]");
   if (catalog) {
@@ -99,7 +115,7 @@
       const gallery = photos.length
         ? `<div class="gallery">
             <a class="gallery-main" href="${photos[0]}.jpg" target="_blank" rel="noopener" data-gallery-main><img src="${photos[0]}.jpg" alt="${escapeHtml(car.title)} — фото 1" width="1600" height="900"></a>
-            <div class="gallery-thumbs">${photos.map((src, i) => `<button type="button" class="gallery-thumb${i === 0 ? " active" : ""}" data-src="${src}.jpg" aria-label="Фото ${i + 1}"><img src="${src}-sm.jpg" alt="" loading="lazy" width="720" height="420"></button>`).join("")}</div>
+            <div class="gallery-thumbs">${photos.map((src, i) => `<button type="button" class="gallery-thumb${i === 0 ? " active" : ""}" data-src="${src}.jpg" data-webp="${src}.webp" aria-label="Фото ${i + 1}"><picture><source srcset="${src}-sm.webp" type="image/webp"><img src="${src}-sm.jpg" alt="" loading="lazy" decoding="async" width="720" height="420"></picture></button>`).join("")}</div>
           </div>`
         : `<div class="car-placeholder" style="border:1px solid var(--line);border-radius:16px;min-height:300px">${carArt()}</div>`;
       detail.innerHTML = `<div class="detail-layout">
@@ -110,7 +126,7 @@
           ${creditBadge()}
           <ul class="list-check">
             ${car.year != null ? `<li>Год выпуска: ${escapeHtml(String(car.year))}</li>` : ""}
-            ${car.mileage != null ? `<li>Пробег: ${formatNumber(car.mileage)} км</li>` : ""}
+            ${car.mileage != null ? `<li>Пробег: ${escapeHtml(formatMileage(car.mileage))}</li>` : ""}
             ${car.owners ? `<li>Владельцы: ${ownersLabel(car.owners)}</li>` : ""}
             ${car.engine ? `<li>Двигатель: ${escapeHtml(car.engine)}</li>` : ""}
             ${car.transmission ? `<li>Коробка передач: ${escapeHtml(car.transmission)}</li>` : ""}
@@ -125,14 +141,87 @@
         </div>
       </div>`;
       const main = detail.querySelector("[data-gallery-main]");
-      detail.querySelectorAll(".gallery-thumb").forEach((thumb, i) => thumb.addEventListener("click", () => {
-        main.href = thumb.dataset.src;
-        main.querySelector("img").src = thumb.dataset.src;
-        main.querySelector("img").alt = `${car.title} — фото ${i + 1}`;
-        detail.querySelectorAll(".gallery-thumb").forEach(t => t.classList.toggle("active", t === thumb));
-      }));
+      const thumbs = [...detail.querySelectorAll(".gallery-thumb")];
+      let currentPhoto = 0;
+      const showPhoto = i => {
+        if (!thumbs.length) return;
+        currentPhoto = (i + thumbs.length) % thumbs.length;
+        const thumb = thumbs[currentPhoto], img = main.querySelector("img"), source = main.querySelector("source");
+        main.href = thumb.dataset.src; img.src = thumb.dataset.src; img.alt = `${car.title} — фото ${currentPhoto + 1}`;
+        if (source) source.srcset = thumb.dataset.webp;
+        thumbs.forEach((t, n) => t.classList.toggle("active", n === currentPhoto));
+        const count = detail.querySelector("[data-gallery-count]"); if (count) count.textContent = `${currentPhoto + 1} / ${thumbs.length}`;
+      };
+      thumbs.forEach((thumb, i) => thumb.addEventListener("click", () => showPhoto(i)));
+      detail.querySelector("[data-gallery-prev]")?.addEventListener("click", () => showPhoto(currentPhoto - 1));
+      detail.querySelector("[data-gallery-next]")?.addEventListener("click", () => showPhoto(currentPhoto + 1));
+      let touchStartX = null;
+      main.addEventListener("touchstart", e => { touchStartX = e.changedTouches[0].clientX; }, {passive:true});
+      main.addEventListener("touchend", e => { if (touchStartX === null) return; const dx=e.changedTouches[0].clientX-touchStartX; if(Math.abs(dx)>45) showPhoto(currentPhoto+(dx<0?1:-1)); touchStartX=null; }, {passive:true});
+      main.addEventListener("click", e => { e.preventDefault(); openLightbox(thumbs.map(t=>t.dataset.src), currentPhoto); });
+      const detailPanel = detail.querySelector(".detail-panel");
+      const callButton = detailPanel.querySelector('a[href^="tel:"]');
+      if (callButton) {
+        const actions = document.createElement("div"); actions.className = "detail-contact-actions";
+        callButton.before(actions); actions.appendChild(callButton);
+        const telegram = document.createElement("a");
+        telegram.className = "btn btn-telegram";
+        telegram.href = "https://t.me/share/url?url=" + encodeURIComponent(location.href) + "&text=" + encodeURIComponent(`Интересует автомобиль ${car.title}`);
+        telegram.target = "_blank"; telegram.rel = "noopener noreferrer"; telegram.textContent = "Написать в Telegram";
+        actions.appendChild(telegram);
+      }
+      const jsonLd = {"@context":"https://schema.org","@type":"Vehicle","name":car.title,"brand":car.title.split(" ")[0],"model":car.title.split(" ").slice(1).join(" "),"vehicleModelDate":car.year,"mileageFromOdometer":car.mileage != null ? {"@type":"QuantitativeValue","value":car.mileage,"unitCode":"KMT"}:undefined,"offers":{"@type":"Offer","price":car.price,"priceCurrency":"RUB","availability":"https://schema.org/InStock"}};
+      const ld = document.createElement("script"); ld.type="application/ld+json"; ld.textContent=JSON.stringify(jsonLd); document.head.appendChild(ld);
+      document.title = `${car.title}${car.year ? " " + car.year : ""} — купить с пробегом в Котласе | РоманАвто`;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.content = `${car.title}${car.year ? " " + car.year + " года" : ""} с пробегом в РоманАвто, Котлас. Цена ${formatPrice(car.price)}. Характеристики, фотографии и связь с продавцом.`;
+
     }
   }
+
+  let lightbox = null, lightboxPhotos = [], lightboxIndex = 0;
+  function ensureLightbox() {
+    if (lightbox) return lightbox;
+    lightbox = document.createElement("div"); lightbox.className = "photo-lightbox"; lightbox.setAttribute("role","dialog"); lightbox.setAttribute("aria-modal","true"); lightbox.setAttribute("aria-label","Просмотр фотографий");
+    lightbox.innerHTML = '<button class="lightbox-close" aria-label="Закрыть">×</button><button class="lightbox-prev" aria-label="Предыдущее фото">‹</button><img alt="Фотография автомобиля"><button class="lightbox-next" aria-label="Следующее фото">›</button><span class="lightbox-count"></span>';
+    document.body.appendChild(lightbox);
+    const render = () => { lightbox.querySelector("img").src=lightboxPhotos[lightboxIndex]; lightbox.querySelector(".lightbox-count").textContent=`${lightboxIndex+1} / ${lightboxPhotos.length}`; };
+    lightbox.querySelector(".lightbox-close").onclick=()=>lightbox.classList.remove("open");
+    lightbox.querySelector(".lightbox-prev").onclick=()=>{lightboxIndex=(lightboxIndex+lightboxPhotos.length-1)%lightboxPhotos.length;render();};
+    lightbox.querySelector(".lightbox-next").onclick=()=>{lightboxIndex=(lightboxIndex+1)%lightboxPhotos.length;render();};
+    lightbox.addEventListener("click",e=>{if(e.target===lightbox)lightbox.classList.remove("open");});
+    document.addEventListener("keydown",e=>{if(!lightbox.classList.contains("open"))return;if(e.key==="Escape")lightbox.classList.remove("open");if(e.key==="ArrowRight")lightbox.querySelector(".lightbox-next").click();if(e.key==="ArrowLeft")lightbox.querySelector(".lightbox-prev").click();});
+    return lightbox;
+  }
+  function openLightbox(photos, index=0) {
+    if (!photos.length) return;
+    const box=ensureLightbox(); lightboxPhotos=photos; lightboxIndex=index; box.querySelector("img").src=photos[index]; box.querySelector(".lightbox-count").textContent=`${index+1} / ${photos.length}`; box.classList.add("open");
+  }
+
+  // Фотоальбом покупателей: отображаем только реальные фотографии, без текстовых карточек.
+  const reviews = window.ROMANAVTO_REVIEWS || [];
+  function reviewCard(review) {
+    if (!review.photo) return "";
+    const alt = `Фото покупателя ${review.customer || ""}`.trim();
+    return `<a class="album-photo" href="${escapeHtml(review.photo)}" data-review-photo="${escapeHtml(review.photo)}" aria-label="Открыть фотографию в полном размере">
+      <img src="${escapeHtml(review.photo)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async">
+    </a>`;
+  }
+  document.querySelectorAll("[data-reviews-preview], [data-reviews-all]").forEach(container => {
+    const photos = reviews.filter(review => review && review.photo);
+    const isPreview = container.hasAttribute("data-reviews-preview");
+    const shown = isPreview ? photos.slice(0, 3) : photos;
+    if (shown.length) {
+      container.innerHTML = shown.map(reviewCard).join("");
+    } else {
+      container.innerHTML = `<div class="review-empty">Фотографии покупателей скоро появятся.</div>`;
+    }
+  });
+
+  document.addEventListener("click", event => {
+    const photoLink = event.target.closest("[data-review-photo]");
+    if (photoLink) { event.preventDefault(); const all=[...document.querySelectorAll("[data-review-photo]")].map(a=>a.dataset.reviewPhoto); openLightbox(all, all.indexOf(photoLink.dataset.reviewPhoto)); }
+  });
 
   const forms = document.querySelectorAll("[data-demo-form]");
   forms.forEach(form => form.addEventListener("submit", event => {

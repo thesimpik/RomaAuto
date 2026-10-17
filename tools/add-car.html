@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Помощник добавления автомобиля — РоманАвто</title>
+<style>
+:root{color-scheme:dark;--bg:#0c0d10;--panel:#17191f;--line:#343842;--red:#e3343f;--muted:#a7abb5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f5f6f8;font:16px/1.5 Arial,sans-serif}.wrap{max-width:900px;margin:auto;padding:28px 18px}h1{font-size:clamp(28px,4vw,42px);line-height:1.1}.hint{color:var(--muted)}form,.output{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label{display:block;font-weight:700;font-size:14px}input,textarea,select{display:block;width:100%;margin-top:6px;padding:11px;border-radius:8px;border:1px solid #454a55;background:#0e1014;color:white;font:inherit}textarea{min-height:130px;resize:vertical}.full{grid-column:1/-1}.btn{display:inline-block;padding:12px 16px;border:0;border-radius:8px;background:var(--red);color:white;font-weight:bold;cursor:pointer;margin:8px 8px 0 0}button.secondary{background:#30343d}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0d0f13;padding:15px;border-radius:8px;border:1px solid var(--line)}.downloads button{display:block;margin:8px 0}@media(max-width:600px){.fields{grid-template-columns:1fr}.full{grid-column:auto}}
+</style></head><body><main class="wrap">
+<p><a href="../index.html" style="color:#ff6972">← Вернуться на сайт</a>　<a href="add-review.html" style="color:#ff6972">Помощник добавления отзыва →</a></p><h1>Помощник добавления автомобиля</h1>
+<p class="hint">Это локальный инструмент для подготовки карточки. Заполните форму, выберите фотографии — он создаст готовую запись для каталога и подготовит фото в нужных размерах. Изменения появятся на опубликованном сайте после загрузки подготовленных файлов.</p>
+<form id="carForm"><div class="fields">
+<label>Марка и модель *<input name="title" required placeholder="Hyundai Solaris"></label>
+<label>Цена, ₽ *<input name="price" type="number" min="0" required placeholder="850000"></label>
+<label>Год выпуска<input name="year" type="number" min="1900" max="2100" placeholder="2013"></label>
+<label>Пробег, км<input name="mileage" type="number" min="0" placeholder="150000"></label>
+<label>Двигатель<input name="engine" placeholder="1,6 л, 123 л.с."></label>
+<label>Коробка передач<input name="transmission" placeholder="Автомат"></label>
+<label>Привод<input name="drive" placeholder="Передний"></label>
+<label>Топливо<input name="fuel" placeholder="Бензин"></label>
+<label>Кузов<input name="body" placeholder="Седан"></label>
+<label>Количество собственников<input name="owners" type="number" min="1" placeholder="2"></label>
+<label class="full">Описание автомобиля *<textarea name="description" required placeholder="Состояние, комплектация, обслуживание, особенности..."></textarea></label>
+<label class="full">Фотографии автомобиля *<input name="photos" type="file" accept="image/*" multiple required><span class="hint">Выберите фото в нужном порядке. Первое фото станет обложкой. Лучше 5–10 фотографий.</span></label>
+</div><button class="btn" type="submit">Подготовить карточку</button></form>
+<section class="output" id="output" hidden><h2>1. Запись для каталога</h2><p class="hint">Скопируйте этот блок в массив в файле assets/cars.js (перед закрывающим ];).</p><pre id="snippet"></pre><button class="btn" id="copyCode" type="button">Скопировать запись</button>
+<h2>2. Подготовленные фотографии</h2><p class="hint">Скачайте файлы и положите их в новую папку assets/cars/ID-МАШИНЫ/. Полноразмерные фото будут называться 1.jpg, 2.jpg…; уменьшенные — 1-sm.jpg, 2-sm.jpg…</p><div class="downloads" id="downloads"></div>
+<h2>3. Завершение</h2><ol><li>Создайте папку для фотографий с ID, указанным в записи.</li><li>Скачайте и положите фото в эту папку.</li><li>Добавьте запись в assets/cars.js.</li><li>Загрузите изменённый файл и папку фото на хостинг Рег.ру.</li></ol><p class="hint">Не загружайте эту страницу как публичную админ-панель: она не защищена паролем и не публикует изменения автоматически. Для добавления машин без редактирования файлов нужна серверная админ-панель или CMS.</p></section>
+</main><script>
+const form=document.getElementById('carForm');let currentCode='';
+function slugify(s){const map={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};return s.toLowerCase().split('').map(c=>map[c]??c).join('').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').replace(/-+/g,'-')||'car-'+Date.now()}
+function jsString(s){return JSON.stringify(s)}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+form.addEventListener('submit',async e=>{e.preventDefault();const d=new FormData(form),files=[...d.getAll('photos')].filter(f=>f instanceof File&&f.size);if(!files.length){alert('Выберите хотя бы одну фотографию');return}
+const title=d.get('title').trim(),id=slugify(title+'-'+(d.get('year')||'')).replace(/^-|-$/g,'');
+const fields=[['id',id],['title',title],['price',Number(d.get('price'))],['year',d.get('year')?Number(d.get('year')):null],['mileage',d.get('mileage')?Number(d.get('mileage')):null],['engine',d.get('engine').trim()],['transmission',d.get('transmission').trim()],['drive',d.get('drive').trim()],['fuel',d.get('fuel').trim()],['body',d.get('body').trim()],['owners',d.get('owners')?Number(d.get('owners')):null],['description',d.get('description').trim()]];
+let lines=['  {'];fields.forEach(([k,v])=>{if(v!==null&&v!=='')lines.push('    '+k+': '+(typeof v==='string'?jsString(v):v)+',')});lines.push('    photos: ['+files.map((_,i)=>i+1).join(', ')+'].map(n => `assets/cars/'+id+'/${n}`)');lines.push('  },');currentCode=lines.join('\n');document.getElementById('snippet').textContent=currentCode;
+const downloads=document.getElementById('downloads');downloads.innerHTML='';
+for(let i=0;i<files.length;i++){const file=files[i],url=URL.createObjectURL(file);const row=document.createElement('div');const label=document.createElement('span');label.textContent=(i+1)+'. '+file.name+' — ';row.append(label);
+const full=document.createElement('button');full.className='btn';full.type='button';full.textContent='Скачать '+(i+1)+'.jpg';full.onclick=()=>{const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas'),scale=Math.min(1,1600/img.width);canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>downloadBlob(blob,(i+1)+'.jpg'),'image/jpeg',.9)};img.src=url};row.append(full);
+const small=document.createElement('button');small.className='btn secondary';small.type='button';small.textContent='Скачать '+(i+1)+'-sm.jpg';small.onclick=async()=>{const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas'),scale=Math.min(1,720/img.width);canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>downloadBlob(blob,(i+1)+'-sm.jpg'),'image/jpeg',.86)};img.src=url};row.append(small);downloads.append(row)}
+document.getElementById('output').hidden=false;document.getElementById('output').scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('copyCode').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(currentCode);document.getElementById('copyCode').textContent='Скопировано'}catch{alert('Не удалось скопировать автоматически. Выделите текст блока и скопируйте вручную.')}});
+</script></body></html>
