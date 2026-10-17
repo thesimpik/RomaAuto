@@ -96,7 +96,7 @@ window.ROMANAVTO_CARS = [
   {
     id: "hyundai-creta-2018",
     title: "HYUNDAI CRETA",
-    price: 1749999,
+    price: 1750000,
     year: 2018,
     mileage: 164000,
     engine: "1,6 л, 123 л.с.",
